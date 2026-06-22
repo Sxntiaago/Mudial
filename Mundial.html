@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="mundial.js" defer></script>
+<title>Simulador Mundial 2026 – En Vivo</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --gold:    #D4A017;
+  --gold-lt: #F0C830;
+  --wine:    #6B0F1A;
+  --wine-dk: #3D0008;
+  --wine-md: #8B1A2A;
+  --dark:    #0D0D0D;
+  --surface: #161616;
+  --card:    #1E1E1E;
+  --border:  #2E2E2E;
+  --text:    #F0EDE8;
+  --muted:   #777;
+  --qualify:   rgba(34,130,60,0.20);
+  --qualify-b: #22823c;
+  --best3:     rgba(52,100,200,0.18);
+  --best3-b:   #4466cc;
+  --live:    #e53;
+  --live-bg: rgba(238,85,51,0.12);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--dark);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* HEADER */
+header {
+  background: linear-gradient(135deg, var(--wine-dk) 0%, var(--wine) 60%, #9B1F2F 100%);
+  padding: 22px 24px 16px;
+  text-align: center;
+  border-bottom: 2px solid var(--gold);
+  position: relative;
+  overflow: hidden;
+}
+header::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(212,160,23,0.07) 0%, transparent 60%),
+    radial-gradient(circle at 80% 30%, rgba(212,160,23,0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+header h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(1.9rem, 5vw, 3.2rem);
+  letter-spacing: 5px;
+  color: var(--gold-lt);
+  text-shadow: 0 2px 18px rgba(212,160,23,0.45);
+  position: relative;
+}
+header p {
+  color: rgba(240,237,232,0.6);
+  font-size: 0.72rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 4px;
+  position: relative;
+}
+
+/* STATUS BAR */
+#status-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.72rem;
+}
+.dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.dot.live { background: var(--live); animation: blink 1.2s infinite; }
+.dot.ok   { background: var(--qualify-b); }
+#last-update { color: var(--muted); }
+#auto-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+  padding: 3px 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .2s;
+}
+#auto-toggle.on { border-color: var(--qualify-b); color: var(--qualify-b); }
+
+/* NAV */
+nav {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+nav button {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+nav button.active, nav button:hover {
+  background: var(--wine);
+  color: var(--gold-lt);
+  border-color: var(--gold);
+}
+
+/* MAIN */
+main { max-width: 1600px; margin: 0 auto; padding: 22px 16px 60px; }
+.section { display: none; }
+.section.visible { display: block; }
+
+/* GROUPS GRID */
+.groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.group-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.group-header {
+  background: linear-gradient(90deg, var(--wine-dk), var(--wine-md));
+  padding: 8px 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--gold);
+}
+.group-header h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: 3px;
+  color: var(--gold-lt);
+}
+.live-badge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: var(--live);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 10px;
+  display: none;
+}
+.live-badge.show { display: inline-block; animation: blink 1.2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.standings { width: 100%; border-collapse: collapse; }
+.standings th {
+  background: #1a1a1a;
+  color: var(--muted);
+  font-size: 0.63rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 5px 6px;
+  text-align: center;
+}
+.standings th:first-child { text-align: left; padding-left: 10px; }
+.standings td {
+  padding: 6px 6px;
+  text-align: center;
+  border-bottom: 1px solid #252525;
+  font-size: 0.78rem;
+  transition: background 0.3s;
+}
+.standings td:first-child {
+  text-align: left;
+  padding-left: 10px;
+  font-weight: 600;
+}
+.standings .pos { color: var(--muted); font-size: 0.68rem; margin-right: 4px; }
+.standings tr.qualify   { background: var(--qualify); }
+.standings tr.qualify td:first-child   { border-left: 3px solid var(--qualify-b); }
+.standings tr.best3rd   { background: var(--best3); }
+.standings tr.best3rd td:first-child   { border-left: 3px solid var(--best3-b); }
+.standings td.pts { font-weight: 700; color: var(--gold-lt); }
+@keyframes flash { 0%{background:rgba(212,160,23,0.25)} 100%{background:transparent} }
+
+.matches-label {
+  padding: 6px 11px 2px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.matches-list { padding: 0 9px 9px; display: flex; flex-direction: column; gap: 4px; }
+
+.match-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto 1fr auto;
+  align-items: center;
+  gap: 4px;
+  background: #232323;
+  border-radius: 7px;
+  padding: 4px 7px;
+  font-size: 0.74rem;
+  border-left: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+.match-row.is-live  { border-left-color: var(--live); background: var(--live-bg); }
+.match-row.finished { border-left-color: #333; }
+.tname { font-weight: 500; }
+.tname.right { text-align: right; }
+.score-display { font-weight: 700; color: var(--gold-lt); font-size: 0.95rem; min-width: 18px; text-align: center; }
+.score-sep { color: var(--muted); font-weight: 300; }
+.match-status { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); text-align: right; white-space: nowrap; }
+.match-status.live { color: var(--live); }
+.match-status.ft   { color: var(--qualify-b); }
+
+/* ── BRACKET ── */
+.bracket-wrap { overflow-x: auto; padding-bottom: 16px; }
+.bracket {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 1280px;
+  padding: 16px 2px;
+}
+.round {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 175px;
+}
+.round-title {
+  text-align: center;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.92rem;
+  letter-spacing: 2px;
+  color: var(--gold);
+  margin-bottom: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.round-matches {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  flex: 1;
+  gap: 5px;
+  padding: 0 5px;
+}
+.final-round .round-matches { justify-content: center; }
+
+/* bracket match card */
+.bracket-match {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.bracket-match:hover { border-color: var(--wine-md); }
+.bracket-match.is-live { border-color: var(--live); }
+
+.bm-team {
+  display: grid;
+  grid-template-columns: 1fr 34px;
+  align-items: center;
+  padding: 5px 7px;
+  gap: 3px;
+  border-bottom: 1px solid #252525;
+  min-height: 30px;
+}
+.bm-team:last-of-type { border-bottom: none; }
+.bm-team.winner { background: rgba(212,160,23,0.13); }
+
+.bm-name {
+  font-size: 0.71rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+.bm-name.tbd         { color: var(--muted); font-style: italic; font-weight: 400; }
+.bm-name.winner-name { color: var(--gold-lt); }
+
+/* score: static display OR editable input */
+.bm-score {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--gold-lt);
+  min-width: 28px;
+}
+.bm-score.tbd-score { color: var(--muted); font-weight: 300; }
+
+input.bm-input {
+  width: 30px; height: 24px;
+  background: #111;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: var(--gold-lt);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+  transition: border-color 0.2s;
+}
+input.bm-input::-webkit-outer-spin-button,
+input.bm-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+input.bm-input:focus   { border-color: var(--gold); }
+input.bm-input:disabled { opacity: 0.25; cursor: not-allowed; }
+
+/* penalty row */
+.bm-penalty-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 3px 7px;
+  background: #181818;
+  border-top: 1px dashed #333;
+  font-size: 0.6rem;
+  color: #e88;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.bm-pen-label { color: #e88; }
+input.pen-input {
+  width: 26px; height: 20px;
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 3px;
+  color: #f0a0a0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+input.pen-input::-webkit-outer-spin-button,
+input.pen-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+input.pen-input:focus { border-color: var(--gold); }
+
+/* live label inside bracket card */
+.bm-live-label {
+  display: block;
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--live);
+  text-align: center;
+  padding: 2px 0;
+  background: var(--live-bg);
+  letter-spacing: 1px;
+}
+
+/* champion box */
+.champion-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 10px;
+  text-align: center;
+}
+.champion-trophy  { font-size: 2.6rem; margin-bottom: 7px; }
+.champion-label   { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 4px; }
+.champion-name    {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.45rem;
+  letter-spacing: 3px;
+  color: var(--gold-lt);
+  text-shadow: 0 0 20px rgba(240,200,48,0.5);
+  min-height: 1.8rem;
+}
+
+/* action bar */
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.68rem;
+  color: var(--muted);
+  align-items: center;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.leg-dot { width: 9px; height: 9px; border-radius: 2px; }
+.leg-green  { background: var(--qualify); border: 1px solid var(--qualify-b); }
+.leg-blue   { background: var(--best3);  border: 1px solid var(--best3-b); }
+.leg-live   { background: var(--live); border-radius: 50%; }
+
+.btn {
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+.btn-wine  { background: var(--wine); color: var(--gold-lt); border: 1px solid var(--gold); }
+.btn-wine:hover  { background: var(--wine-md); }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+/* note strip above bracket */
+.bracket-note {
+  font-size: 0.7rem;
+  color: var(--muted);
+  background: #1a1a1a;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.bracket-note span.hl { color: var(--gold-lt); font-weight: 600; }
+
+/* loader */
+#loader {
+  position: fixed; inset: 0;
+  background: rgba(13,13,13,0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  gap: 14px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.85s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#error-banner {
+  display: none;
+  background: rgba(200,50,30,0.14);
+  border: 1px solid rgba(200,50,30,0.35);
+  color: #f99;
+  font-size: 0.73rem;
+  padding: 7px 14px;
+  text-align: center;
+  margin-bottom: 10px;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+@media (max-width: 640px) {
+  .groups-grid { grid-template-columns: 1fr; }
+  .bracket { min-width: 900px; }
+  .round   { min-width: 140px; }
+}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="spinner"></div>
+  <span>Cargando datos del Mundial 2026…</span>
+</div>
+
+<header>
+  <h1>⚽ Mundial 2026 – En Vivo</h1>
+  <p>Canadá · México · Estados Unidos · Actualización automática</p>
+</header>
+
+<div id="status-bar">
+  <div>
+    <span class="dot" id="status-dot"></span>
+    <span id="status-text">Conectando…</span>
+  </div>
+  <span id="last-update"></span>
+  <button id="auto-toggle" onclick="toggleAuto()">⏸ Auto-actualizar</button>
+</div>
+
+<nav>
+  <button class="active" onclick="showSection('groups')">Fase de Grupos</button>
+  <button onclick="showSection('bracket')">Llaves Eliminatorias</button>
+</nav>
+
+<main>
+
+  <!-- GROUPS -->
+  <div id="section-groups" class="section visible">
+    <div class="action-bar">
+      <div class="legend">
+        <div class="legend-item"><div class="leg-dot leg-green"></div> Clasificados (1º y 2º)</div>
+        <div class="legend-item"><div class="leg-dot leg-blue"></div> Posible mejor 3º</div>
+        <div class="legend-item"><div class="leg-dot leg-live" style="width:7px;height:7px"></div> En juego</div>
+      </div>
+      <span id="groups-count" style="font-size:0.7rem;color:var(--muted)"></span>
+    </div>
+    <div id="error-banner"></div>
+    <div class="groups-grid" id="groups-container"></div>
+  </div>
+
+  <!-- BRACKET -->
+  <div id="section-bracket" class="section">
+    <div class="action-bar">
+      <button class="btn btn-wine" onclick="showSection('groups')">← Grupos</button>
+      <button class="btn btn-ghost" onclick="resetBracket()">Limpiar marcadores</button>
+    </div>
+    <div class="bracket-note">
+      <span>⚡</span>
+      <span>Los cruces de <span class="hl">Ronda de 32</span> se arman automáticamente desde las tablas. Ingresa los goles en cada llave para avanzar al ganador. En caso de empate aparecen campos de <span class="hl">penales</span>.</span>
+    </div>
+    <div class="bracket-wrap">
+      <div class="bracket" id="bracket-container"></div>
+    </div>
+  </div>
+
+</main>
+
+</body>
+</html>
